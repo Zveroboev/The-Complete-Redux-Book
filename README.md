@@ -56,9 +56,9 @@ Redux делает особенным то, что reducers никогда не 
 
 ![Redux поток](./source/img/redux-flow.png)
 
-#### Redux Terminology
+#### Redux Терминология
 
-**Actions and Action Creators**
+**Actions и Action Creators**
 
 Единственный способ для приложения изменить состояние - это обработать actions. В большинстве случаев actions в Redux - это не что иное, как простые объекты JavaScript, переданные в store, которые содержат всю информацию, для того, что бы store смог изменить состояние:
 
