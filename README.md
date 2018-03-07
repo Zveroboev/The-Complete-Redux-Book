@@ -1,6 +1,6 @@
 # Перевод книги [The Complete Redux Book](https://leanpub.com/redux-book) от [Ilya Gelman](https://leanpub.com/u/ilyagelman) и [Boris Dinkevich](https://leanpub.com/u/borisdinkevich)
 
-Переведено и опубликовано с разрешения правообладателей.
+Перевод книги от 31-01-2017. Переведено и опубликовано с разрешения правообладателей.
 
 ## Оглавление
 * [Часть 1. Введение в Redux](#part-1)
