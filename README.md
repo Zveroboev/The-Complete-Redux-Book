@@ -787,4 +787,18 @@ store.dispatch(addIngredient('Omelette', 'Eggs', 3));
 
 ### <a name="Structuring-the-Code">Структурирование кода</a>
 
-...
+Очевидно, что весь наш код в одном файле - плохая идея. Обычно в Redux структура каталогов соответствует именам его сущностей. Reducers помещаются в каталог _reducers_, а основной reducer (обычно называемый корневым) помещается в файл _root.js_. Action creators находятся в директории _actions_, разделенные по типу объекта или данных, которые они обрабатыают - в нашем случае _actions/recipes.js_ и _actions/ingredients.js_. Поскольку у нас есть только один store, мы можем поместить весь его код в один файл: _store/store.js_.
+
+После всех изменений файл index.js должен выглядеть следующим образом:
+
+_index.js_
+```javascript
+import store from './store/store';
+import { addRecipe } from './actions/recipes';
+import { addIngredient } from './actions/ingredients';
+
+store.dispatch(addRecipe('Pancake'));
+store.dispatch(addIngredient('Pancake', 'Eggs', 3));
+
+window.store = store;
+```
