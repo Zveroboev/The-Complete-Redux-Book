@@ -15,6 +15,7 @@
         * [Наше первое приложение](#Our-First-Application)
         * [Настройка Store](#Setting-Up-the-Store)
         * [Добавление рецептов](#Adding-Recipes)
+        * [Добавление ингридиентов](#Adding-Ingredients)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -697,7 +698,7 @@ store.dispatch({ type: 'ACTION' });
 
 ### <a name="Adding-Recipes">Добавление рецептов</a>
 
-Чтобы реализовать добавление рецептов, нам нужно найти способ изменить наш store. Как мы узнали в предыдущей главе, изменять store могут только reducer в ответ на action. Это означает, что нам нужно определить структуру action и изменить наш (очень скудный) reducer, чтобы поддержать этот action.
+Чтобы реализовать добавление рецептов, нам нужно найти способ изменить наш store. Как мы узнали в предыдущей главе, изменять store могут только reducer в ответ на action. Это означает, что нам нужно определить структуру действия (action) и изменить наш (очень скудный) reducer, чтобы поддержать это действие (action).
 
 Действия (actions) в Redux - это не что иное, как простые объекты, обладающие обязательным свойством _type_. Мы будем использовать строки, чтобы дать имя нашему action, причем наиболее подходящим в этом случае будет 'ADD_RECIPE'. Поскольку у рецепта есть название, мы добавим его к данным action:
 
@@ -739,3 +740,46 @@ const reducer = (state, action) => {
 case 'ADD_RECIPE' стал более сложный, но работает в точности так, как мы хотим. Мы используем метод _Object.assign()_ для создания нового объекта, который не только будет иметь все ключи/значения из нашего прошлого состояния (state), но и  перезапишет ключ _recipes_ с новым значением. Чтобы вычеслить список новых рецептов, мы используем _concat()_ вместо _push()_, так как _push()_ изменяет исходный массив, в то время как _concat()_ создает новый массив, содержащий все исходные значения и одно новое.
 
 Больше информации о методе _Object.assign()_ доступно в главе [Reducers](#charapter-5).
+
+### <a name="Adding-Ingredients">Добавление ингредиентов</a>
+
+Подобно добавлению рецептов, этот шаг потребует, чтобы мы снова модифицировали reducer. Добавим ему возможность добавления ингридиентов:
+
+_Добавляем ADD_INGREDIENT в reducer_
+```javascript
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'ADD_RECIPE':
+      return Object.assign({}, state, {
+        recipes: state.recipes.concat({ name: action.name })
+      });
+ 
+    case 'ADD_INGREDIENT':
+      const newIngredient = {
+        name: action.name,
+        recipe: action.recipe,
+        quantity: action.quantity
+      };
+      return Object.assign({}, state, {
+        ingredients: state.ingredients.concat(newIngredient)
+      });
+   }
+ 
+  return state;
+};
+```
+
+Одна из проблем, с которой вы можете столкнуться при отправке действий из консоли для тестирования store, заключается в том, что трудно запомнить свойства, которые необходимо передать в объекте действия (action). Это одна из причин почему в Redux мы используем идею _action creators_: функции, которые создают для нас объект действия.
+
+_Функция создания объекта action_
+```javascript
+const addIngredient = (recipe, name, quantity) => ({
+  type: 'ADD_INGREDIENT', recipe, name, quantity
+});
+ 
+store.dispatch(addIngredient('Omelette', 'Eggs', 3));
+```
+
+Эта функция скрывает структуру action от пользователя и позволяет нам изменять action, устанавливать значения по умолчанию для свойств, обрезать имена и многое другое.
+
+Для получения более подробной информации о action creators обратитись к главе [Actions и Action Creators](#charapter-8)
