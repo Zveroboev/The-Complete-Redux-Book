@@ -16,6 +16,7 @@
         * [Настройка Store](#Setting-Up-the-Store)
         * [Добавление рецептов](#Adding-Recipes)
         * [Добавление ингридиентов](#Adding-Ingredients)
+        * [Структурирование кода](#Structuring-the-Code)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -783,3 +784,7 @@ store.dispatch(addIngredient('Omelette', 'Eggs', 3));
 Эта функция скрывает структуру action от пользователя и позволяет нам изменять action, устанавливать значения по умолчанию для свойств, обрезать имена и многое другое.
 
 Для получения более подробной информации о action creators обратитись к главе [Actions и Action Creators](#charapter-8)
+
+### <a name="Structuring-the-Code">Структурирование кода</a>
+
+...
