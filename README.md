@@ -22,6 +22,7 @@
         * [Подробней о Reducer](#A-Closer-Look-at-Reducers)
         * [Обработка опечаток и дубликатов](#Handling-Typos-and-Duplicates)
         * [Простой пользовательский интерфейс](#Simple-UI)
+        * [Логирование](#Logging)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -958,4 +959,42 @@ export default function loadUI() {
  
   updateUI();
 }
+```
+
+<a name="Logging">Логирование</a>
+
+Теперь, когда наш пользовательский интерфейс позволяет нам добавлять новые рецепты, мы обнаружили, что нам трудно понять какие actions отправляются в store. Как вариант можно логировать логировать actions из корневоого reducer, но, как мы вскоре увидим, это может быть проблематично. Другим вариантом является использование _middleware_, о которой мы говорили в предыдущей главе.
+
+В store содержится подключение ко всем middleware и они получают action раньше чем reducer. Это означает, что они имеют доступ к любым action, отправленным в store. Чтобы проверить это, давайте создадим простую логирующую middleware, которая будет выводить в коноль любые действия, отправленные в store:
+
+_Простая логирующая middleware_
+```javascript
+const logMiddleware = ({ getState, dispatch }) => (next) => (action) => {
+  console.log(`Action: ${ action.type }`);
+ 
+  next(action);
+};
+ 
+export default logMiddleware;
+```
+
+По началу эта структура может показаться странной, так как мы создаем функцию, которая возвращает функцию, которая возвращает функцию. Хотя это может немного сбивать с толку, но это необходимо для того, чтобы Redux мог объединить все middleware. На практике, внутри самой функции, мы имеем доступ к методам хранилища (store) _dispatch()_ и _getState()_, текущему обрабатываемому action и методу _next()_, который позволяет нам вызвать следующую по порядку middleware.
+
+Наш логер выводит в консль текущий action, а затем вызывает _next(action)_, чтобы передать action следующеей middleware. В некоторых случаях middleware может подавлять action или изменять его. Поэтому внедрение логера в reducer не является жизнеспособным решением - некоторые из action могут не дойти до него.
+
+Для подключения middleware к нашему store, нам необходимо изменить файл _store/store.j_. Используем встроенную в Redux функцию _applyMiddleware()_:
+
+_Подключение middleware к store_
+```javascript
+import { createStore, applyMiddleware } from 'redux';
+import rootReducers from 'reducers/root';
+import logMiddleware from 'middleware/log';
+
+const initialState = { ... };
+
+export default createStore(
+  rootReducers,
+  initialState,
+  applyMiddleware(logMiddleware)
+);
 ```
