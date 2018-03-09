@@ -21,6 +21,7 @@
         * [Структурирование кода](#Structuring-the-Code)
         * [Подробней о Reducer](#A-Closer-Look-at-Reducers)
         * [Обработка опечаток и дубликатов](#Handling-Typos-and-Duplicates)
+        * [Простой пользовательский интерфейс](#Simple-UI)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -877,4 +878,84 @@ const recipesReducer = (recipes = [], action) => {
   switch (action.type) {
     case ADD_RECIPE:
       …
+```
+
+### <a name="Simple-UI">Простой пользовательский интерфейс</a>
+
+Что бы разобрать как можно связать пользовательский интерфейс и Redux мы будем использовать немного магии jQuery. Обратите внимание, что этот пример очень прост и никогда не должен использоваться в реальном приложении. Он должен дать общее представление о том, как «реальные» приложения взаимодействуют с Redux.
+
+Давайте сохраним нам текцщий пользовательский интерфейс в _ui/jquery/index.js_. Пользовательский интерфейс jQuery создаст простое отображение текущих рецептов в хранилище (store):
+
+_ui/jquery/index.js_
+```javascript
+import $ from 'jquery';
+import store from 'store/store';
+ 
+function updateUI() {
+  const { recipes } = store.getState();
+  const renderRecipe = (recipe) => `<li>${ recipe.name }</li>`;
+ 
+  $('.recipes > ul').html(recipes.map(renderRecipe));
+}
+ 
+export default function loadUI() {
+  $('#app').append(`
+    <div class="recipes">
+      <h2>Recipes:</h2>
+      <ul></ul>
+    </div>
+  `);
+  
+  updateUI();
+}
+```
+
+Мы используем jQuery метод _append()_ для добавления нового div в контейнер нашего приложения и используем функцию _updateUI()_, чтобы вытащить список рецептов из нашего store и отобразить их как список неупорядоченных элементов.
+
+Чтобы наш пользовательский интерфейс отвечал на обновления, мы можем просто зарегистрировать функцию _updateUI()_ в нашем store, внутри _loadUI()_:
+
+_Зарегистрировать updateUI в store_
+```javascript
+store.subscribe(updateUI);
+```
+
+Чтобы поддерживать добавление рецептов, мы добавим простой `input` и `button`, используем метод _dispatch()_ нашего store вместе с action creator _addRecipe()_, чтобы отправить action в store:
+
+_Добавим поддержку событий click_
+```javascript
+import $ from 'jquery';
+import store from 'store/store';
+import { addRecipe } from 'actions/recipes';
+ 
+function updateUI() {
+  const { recipes } = store.getState();
+  const renderRecipe = (recipe) => `<li>${ recipe.name }</li>`;
+ 
+  $('.recipes > ul').html(recipes.map(renderRecipe));
+}
+ 
+function handleAdd() {
+  const $recipeName = $('.recipes > input');
+ 
+  store.dispatch(addRecipe($recipeName.val()));
+ 
+  $recipeName.val('');
+}
+ 
+export default function loadUI() {
+  $('#app').append(`
+    <div class="recipes">
+      <h2>Recipes:</h2>
+      <ul></ul>
+      <input type="text" />
+      <button>Add</button>
+    </div>
+  `);
+ 
+  store.subscribe(updateUI);
+ 
+  $(document).on('click', '.recipes > button', handleAdd);
+ 
+  updateUI();
+}
 ```
