@@ -23,6 +23,7 @@
         * [Обработка опечаток и дубликатов](#Handling-Typos-and-Duplicates)
         * [Простой пользовательский интерфейс](#Simple-UI)
         * [Логирование](#Logging)
+        * [Получение данных с сервера](#Getting-Data-from-the-Server)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -141,7 +142,7 @@ function rootReducer(state, action) {
 }
 ```
 
-`Reducer никогда не модифицирует state. Он всегда возврщает новую копию c необходимыми изменениями.`
+Reducer никогда не модифицирует state. Он всегда возврщает новую копию c необходимыми изменениями.
 
 #### Middleware
 
@@ -998,3 +999,120 @@ export default createStore(
   applyMiddleware(logMiddleware)
 );
 ```
+
+### <a name="Getting-Data-from-the-Server">Получение данных с сервера</a>
+
+Получение данных с сервера, как и все в Redux, происходит в результате отправленного action. В нашем случае пользовательский интерфейс должен отправить действие, когда он загружается, чтобы попросить Redux запросить данные в store. Для этого мы должны добавить новую константу в _constants/action-types.js_ и новый  action creator в _actions/recipes.js_. Наш action будет называться `'FETCH_RECIPES'`.
+
+К сожалению, мы не можем обработать action внутри reducer, посколько action требует доступ к серверу, что может занять некоторое время. Наш reducer не сможет обработать ответ, он должен сразу же вернуть модифицированное состояние.
+
+К счастью, у нас есть middleware, которые имеют доступ к store и , следовательно, к его методу _dispatch()_. Это значит, что мы можем поймать action в middleware, отправить Ajax запрос и затем отправить новый action в reducer, c полученными данными внутри.
+
+Вот простое API для middleware, которая слушает `'FETCH_RECIPES'` и отправляет `'SET_RECIPES'`, когда получает данные:
+
+_API middleware_
+```javascript
+import { FETCH_RECIPES } from 'constants/action-types';
+import { setRecipes } from 'actions/recipes';
+ 
+const URL = 'https://s3.amazonaws.com/500tech-shared/db.json';
+ 
+function fetchData(url, callback) {
+  fetch(url)
+    .then((response) => {
+      if (response.status !== 200) {
+        console.log(`Error fetching recipes: ${ response.status }`);
+      } else {
+        response.json().then(callback);
+      }
+    })
+    .catch((err) => console.log(`Error fetching recipes: ${ err }`))
+}
+ 
+const apiMiddleware = ({ dispatch }) => next => action => {
+  if (action.type === FETCH_RECIPES) {
+    fetchData(URL, data => dispatch(setRecipes(data)));
+  }
+ 
+  next(action);
+};
+ 
+export default apiMiddleware;
+```
+
+Главное в коде нашей middleware - это простой оператор _if_, который вызывает функцию _fetchData()_ и передает ему обратный вызов (callback). Этот callback вызывает функцию _dispatch_, в которую передает _setRecipes()_ с возвращенными данными:
+
+_Ловим API запроса_
+```javascript
+if (action.type === FETCH_RECIPES) {
+  fetchData(URL, data => store.dispatch(setRecipes(data)));
+}
+```
+
+Функция _fetchData()_ является универсальной для всех действий, где необходим запрос на сервер.
+
+Что бы заставить эту middleware работать, нам необходимо добавить её в наш store.
+
+_Добавляем еще одну middleware в наш store_
+```javascript
+import { createStore, applyMiddleware } from 'redux';
+import rootReducers from 'reducers/root';
+import logMiddleware from 'middleware/log';
+import apiMiddleware from 'middleware/api';
+ 
+const initialState = { … };
+ 
+export default createStore(
+  rootReducers,
+  initialState,
+  applyMiddleware(logMiddleware, apiMiddleware)
+);
+```
+
+Нам так же нужно изменить файл _reducers/recipes.js_ для поддержки нового action `'SET_RECIPES'`:
+
+_Добавляем поддержку SET_RECIPES в reducer_
+```javascript
+import { ADD_RECIPE, SET_RECIPES } from 'constants/action-types';
+
+const recipesReducer = (recipes = [], action) => {
+  switch (action.type) {
+    case ADD_RECIPE:
+      return recipes.concat({name: action.name});
+
+    case SET_RECIPES:
+      return action.data.recipes;
+  }
+
+  return recipes;
+};
+
+export default recipesReducer;
+```
+
+Код в reducer на удивление прост. Поскольку мы получаем новый список рецептов с сервера, мы можем просто вернуть его:
+
+_Простая реализация SET_RECIPES_
+```javascript
+case SET_RECIPES:
+  return action.data.recipes;
+```
+
+Наконец, мы можем удалить _начальное состояние (initialState)_, которое мы передали в наш store, так как мы будем получать эти данные с сервера. Каждый reducer имеет значения по умолчанию для своих поддеревьев (помните `the recipes = []` выше?) и они будут автоматически создавать начальное состояние. Эта магия объясняется в главе [Reducers](#charapter-9).
+
+Это наш новый _store/store.js_:
+
+_store/store.js_
+```javascript
+import { createStore, applyMiddleware } from 'redux';
+import rootReducers from 'reducers/root';
+import logMiddleware from 'middleware/log';
+import apiMiddleware from 'middleware/api';
+ 
+export default createStore(
+  rootReducers,
+  applyMiddleware(logMiddleware, apiMiddleware)
+);
+```
+
+В реальном приложении API middleware будет более общим и надежным. Более подробно рассмотрим в главе [Middleware](#charapter-10).
