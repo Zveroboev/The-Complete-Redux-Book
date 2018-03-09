@@ -19,6 +19,7 @@
         * [Добавление рецептов](#Adding-Recipes)
         * [Добавление ингридиентов](#Adding-Ingredients)
         * [Структурирование кода](#Structuring-the-Code)
+        * [Подробней о Reducer](#A-Closer-Look-at-Reducers)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -804,3 +805,49 @@ store.dispatch(addIngredient('Pancake', 'Eggs', 3));
 
 window.store = store;
 ```
+
+### <a name="A-Closer-Look-at-Reducers">Подробней о Reducer</a>
+
+Если вы откроете _reducers/root.js_, вы увидите что этот reducer обрабатывает рззаные части нашего дерева состояния. По мере того как наше приложение будет расти, к рецептам и поддеревам ингредиентов добавятся больше свойств. Поскольку код в обоих обработчиках не зависит друг от друга, мы можем разделить его на три редуктора, каждый из которых отвечает за другую часть состояния:
+
+_Многофункциональный reducer_
+```javascript
+const recipesReducer = (recipes, action) => {
+  switch (action.type) {
+    case 'ADD_RECIPE':
+      return recipes.concat({name: action.name});
+  }
+ 
+  return recipes;
+};
+ 
+const ingredientsReducer = (ingredients, action) => { … }
+ 
+const rootReducer = (state, action) => {
+  return Object.assign({}, state, {
+    recipes: recipesReducer(state.recipes, action),
+    ingredients: ingredientsReducer(state.ingredients, action)
+  });
+};
+```
+
+В таком подходе есть три основных преимущества. Во-первых, наш корневой редуктор теперь очень простой. Все что он делает, это создает новый объект состояния (state), комбинирую старое состояние и результат каждого reducer. Во-вторых, наш reducer по обработке рецептов стал намного проще, поскольку он должен обрабатывать часть только часть нашего state. И самое главное, наш корневой reducer. Reducer ингридиентов, рецептов и любой другой, который мы можем создать в дальнейшем не должны ничего знать заботиться о внутренней структуре друг друга. Таким образом, изменение какого-то рецепта будет влиять только на часть общего поддерева состояния. Побочным эффектом этого является то, что мы можем сказать каждому reducer, как инициализировать его собственное поддерево, используя параметры по умолчанию из ES2016:
+
+_Reducer для рецептов_
+```javascript
+const recipesReducer = (recipes = [], action) => { ... };
+```
+
+Обратите внимание на значение по умолчанию `[]` для _рецептов (recipes)_.
+
+Поскольку объединение нескольких reducer является очень распространенной схемой, Redux имеет специальную функцию _combReducers()_, которая занимается именно тем, что и делает наш корневой reducer:
+
+_Объединение нескольких reducer_
+```javascript
+export default combineReducers({
+  recipes: recipesReducer,
+  ingredients: ingredientsReducer
+});
+```
+
+Здесь мы создали корневой reducer, в котором используются два других reducer, один из которых находится в поддереве рецептов, а другой - в поддереве ингредиентов. Настало время разделить наши reducer на два отдельных файла _reducers/recipes.js_ и _reducers/ingredients.js_.
