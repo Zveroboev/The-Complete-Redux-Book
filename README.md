@@ -12,7 +12,7 @@
         * [Redux и React](#Redux-and-React)
         * [Основная реализация Redux](#Basic-Redux-Implementation)
         * [Подведем итоги](#Summary-1)
-    * [Глава 2. Ваше первое Redux приложоние](#charapter-2) 
+    * [Глава 2. Ваше первое Redux приложение](#charapter-2) 
         * [Стартовый проект](#Starter-Project)
         * [Наше первое приложение](#Our-First-Application)
         * [Настройка Store](#Setting-Up-the-Store)
