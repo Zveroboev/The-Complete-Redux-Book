@@ -1128,4 +1128,3 @@ export default createStore(
 
 ### <a name="charapter-3">Глава 3. Управление состоянием.</a>
 
-...
