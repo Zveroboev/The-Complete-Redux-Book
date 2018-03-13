@@ -40,6 +40,7 @@
         * [Использование API Middleware](#Using-the-API-Middleware)
         * [Обработка ошибок](#Error-Handling)
         * [Индикатор загрузки](#Loading-Indicator)
+        * [Динамические типы объекта action](#Dynamic-Action-Types)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -1758,5 +1759,92 @@ const uiReducer = (state, action) => {
         requests: state.requests - 1 
       });
     }
+};
+```
+
+### <a name="Dynamic-Action-Types">Динамические типы объекта action</a>
+
+Основываясь на примере индикатора загрузки, мы можем обрабатывать несколько индикаторов для разных частей нашего приложения, используя множественные поддеревья в под-дереве состояния _ui_. К сожалению, это не работает с общими actions успеха/ошибки. 
+
+Один из способов обработки множества ожидающих, успешных и неуспешных action - передать их в отправленном action:
+
+_Action creator с пользовательским ожидаемым действием_
+```javascript
+const fetchRecipes = () => ({
+  type: 'API',
+  payload: { 
+    url: 'recipes.json',
+    pending: 'FETCH_RECIPES_PENDING',
+    success: 'FETCH_RECIPES_SUCCEESS',
+    error:   'FETCH_RECIPES_FAILURE'
+  }
+});
+```
+
+Этот метод позволяет нам обрабатывать различные типы action в разных reducer. Однако этот подход не гибок, принуждает к повторению кода и заставляет нас иметь несколько типов action, определенных для каждого отдельного action API.
+
+Другой подход призывает указывать статус ответа сервера в отправленном action:
+
+```javascript
+dispatch({ type: FETCH_RECIPES, status: 'SUCCESS', response });
+```
+
+Это может выглядеть просто, поскольку вы можете повторно использовать одно действие в middleware, но этот подход приводит к тому, что reducer содержит больше информации и логики, что очень сильно затрудняет отладку и логирование (потому что мы получаем одни и те же типы action и правильно определить, какой из них имел определенный статус).
+
+Третий подход заключается в создании динамических типов объекта action, которые будут следовать единому соглашению:
+
+_constants/action-types.js_
+```javascript
+const asyncActionType = (type) => ({
+  PENDING: `${type}_PENDING`,
+  SUCCESS: `${type}_SUCCESS`,
+  ERROR: `${type}_ERROR`,
+});
+ 
+export const LOGIN = asyncActionType('LOGIN');
+export const FETCH_RECIPES = asyncActionType('FETCH_RECIPES');
+```
+
+При таком подходе мы можем использовать одну и ту же константу типа action для обработки трех случаев для асинхронных действий:
+
+_reducers/recipes.js_
+```javascript
+import { FETCH_RECIPES } from 'constants/action-types';
+
+const recipesReducer = (state, action) => {
+  
+  switch (action.type) {
+    case FETCH_RECIPES_SUCCESS:
+	  // Обработка успешного ответа
+  
+    case FETCH_RECIPES_ERROR:
+	  // Обработка ошибки
+    ...
+  }
+}
+```
+
+Поскольку наш API middleware уже проверяет _success_ и _panding_ в _action.payload_, action creators могут просто объединить все эти асинхронные action внутри payload: 
+
+_API action creator с пользовательской обработкой статуса_
+```javascript
+const fetchRecipes = () => ({
+  type: API,
+  payload: Object.assign({ url: 'recipes' }, FETCH_RECIPES)
+});
+```
+
+Результатом этого action creator будет следующий action:
+
+_Действие с пользовательской обработкой статуса_
+```javascript
+{
+  type: 'API',
+  payload: {
+    url: 'recipes',
+    PEDNING: 'RECIPES_PENDING',
+    SUCCESS: 'RECIPES_SUCCESS',
+    ERROR: 'RECIPES_ERROR'
+  }
 };
 ```
