@@ -36,6 +36,7 @@
     * [Глава 4. Взаимодействие с сервером](#charapter-4)
         * [Использование обещаний (promise) в Action Creators](#Using-Promises-in-Action-Creators)
         * [API Middleware](#API-Middleware)
+        * [Перемещение кода из action creator](#Moving-Code-from-Action-Creators)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -1604,4 +1605,59 @@ const apiMiddleware = ({ dispatch }) => next => action => {
 };
 ```
 
-Наша middleware будет слушать все action c type 'API' и использовать информацию переданную ей в поле payload, что бы отправить запрос на сервер. Это позволит пропустить любые другие действия дальше по цепочке middleware.
+Наша middleware будет слушать все action c type 'API' и использовать информацию переданную ей в поле payload, что бы отправить запрос на сервер.
+
+### <a name="Moving-Code-from-Action-Creators">Перемещение кода из action creator</a>
+
+В исходном асинхронном примере для связи с сервером использовался следующий код:
+
+_Обещание в action creator_
+```javascript
+const fetchUser = id => (dispatch) =>
+  fetch(`user/${id}`)
+    .then(response => response.json())
+    .then(userData => dispatch(setUserData(userData))
+    .catch(error => dispatch(apiError(error)));
+```
+
+В этом коде есть несколько проблем, которые нам необходимо будет решить в нашем общем API:
+
+* Как создать URL-адрес
+* Какой HTTP запрос использовать (GET/POST или другие)
+* Какой action отправится в случае успеха и в случае ошибки
+
+Поскольку мы планируем передать всю эту информацию внутри нашего объекта action, мы можем ожидать, что соответствующий action creator передаст ему все эти необходимые параметры.
+
+Проблема с построением URL адресов решается просто передав требуемый URL адрес в объект action (мы начнем только с GET запросов):
+
+_Итоговый URL адрес_
+```javascript
+fetch(BASE_URL + action.url)
+```
+ 
+Чтобы сделать эти вещи более универсальными, action будет содержать только относительную часть полного URL адреса сервера. Это позволит нам легко установить различный _BASE_URL_ в процессе разработки и тестирования.
+
+Обработка возвращаемого значения из вызова немного сложнее, так как нашей middleware необходимо выяснить, какой action нужно отправить (dispatch). Самое простое решение - передать следующий action внутри текущего. В нашем случае мы будем использовать соглашение Flux Standard Action (FSA) и поместим идентификатор следующего действия в ключ _success_ (а точнее - action.payload.success):
+
+_Обработка результата_
+```javascript
+dispatch({ type: action.payload.success, response });
+```
+
+Объединение этих двух идей приводит к следующему базовому API middleware:
+
+_Базовый API middleware_
+```javascript
+const apiMiddleware = ({ dispatch }) => next => action => {
+  if (action.type !== 'API') {
+    return next(action);
+  }
+ 
+  const { payload } = action; 
+   
+  fetch(BASE_URL + action.url)
+     .then(response => response.json())
+     .then(response => dispatch({ type: payload.success, response }))
+  );
+};
+```
