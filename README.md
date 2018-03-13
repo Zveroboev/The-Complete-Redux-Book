@@ -37,6 +37,7 @@
         * [Использование обещаний (promise) в Action Creators](#Using-Promises-in-Action-Creators)
         * [API Middleware](#API-Middleware)
         * [Перемещение кода из action creator](#Moving-Code-from-Action-Creators)
+        * [Использование API Middleware](#Using-the-API-Middleware)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -1659,5 +1660,32 @@ const apiMiddleware = ({ dispatch }) => next => action => {
      .then(response => response.json())
      .then(response => dispatch({ type: payload.success, response }))
   );
+};
+```
+
+### <a name="Using-the-API-Middleware">Использование API Middleware</a>
+
+Чтобы использовать нашу middleware, нам нужно создать для него специальный объект действия:
+
+_Пример action creator_
+```javascript
+import { API, SET_RECIPES } from 'constants/action-types';
+ 
+const fetchRecipes = () => ({
+  type: API,
+  payload: {
+    url: 'recipes.json',
+    success: SET_RECIPES
+  }
+})
+```
+
+Наша middleware должна связаться с сервером и продолжить обычный поток приложения. Позднее, как только общение с сервером завершится, она должна отправить новый action в store:
+
+_Конечный action отправленный после успешно завершенного вызова_
+```javascript
+{
+  type: SET_RECIPES,
+  payload: [ .. массив рецептов с сервера ..]
 };
 ```
