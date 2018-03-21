@@ -41,6 +41,9 @@
         * [Обработка ошибок](#Error-Handling)
         * [Индикатор загрузки](#Loading-Indicator)
         * [Динамические типы объекта action](#Dynamic-Action-Types)
+        * [Аутентификация](#Authentication)
+        * [Дополнительные расширения](#More-Extensions)
+        * [Связывания API](#Chaining-APIs)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -1848,3 +1851,181 @@ _Action с пользовательской обработкой статуса_
   }
 };
 ```
+
+### <a name="Authentication">Аутентификация</a>
+
+Распространенное место для хранения информации о текущем пользователе (например, токен доступа) находится в хранилище (store) Redux. Поскольку вся наша API логика теперь находится в одном месте, а middleware имеет полный доступ к хранилищу благодаря методу _getState()_, мы можем извлечь _accessToke_ из состояния и установить его как заголовок для наших запросов на сервер:
+
+_Установка токена доступа_
+```javascript
+const { accessToken } = getState().currentUser;
+
+if (accessToken) {
+  // Устанавливаем заголовки
+}
+```
+
+Все наши запросы на серверов теперь автоматически получат правильные заголовки, и мы не будем беспокоиться об этом в других частях нашего приложения.
+
+### <a name="More-Extensions">Дополнительные расширения</a>
+
+По-прежнему существует несколько вещей, которых не хватает в нашей middleware, что бы сделать её пригодной для использования в реальных приложениях. Нам нужна поддержка большего количества типов запросов (а не только GET), установка пользовательских заголовков, таймауты, кеширование и многое другое. Большинство из этого можно реализовать путем получения данных из объекта action или из самого хранилища. Надежное решение для этого уже реализовано в [redux-api-middleware](https://github.com/agraboso/redux-api-middleware).
+
+### <a name="Chaining-APIs">Связывание API</a>
+
+Иногда получение данных с сервера требует нескольких разных вызовов - например, когда возвращаемые данные из одного необходимы для других вызовов. Как пример можно привести получение данных о текущем пользователе, а затем, используя эти данные, получаем профиля этого пользователя. Если бы мы использовали обещания action creator, решение оказалось бы довольно простым:
+
+_Связывание обещаний_
+```javascript
+const fetchCurrentUser = () => (dispatch) => fetch(`user`)
+  .then(response => response.json())
+  .then(userData => {
+      dispatch(setUserData(userData));
+ 
+      // Получаем профиль пользователя
+      fetch(`profile/${userData.profileId}`)
+        .then(response => response.json())
+        .then(profileData => dispatch(setProfileData(profileData)));
+    }
+  );
+};
+```
+
+С этим кодом есть несколько проблем:
+
+* Обработка ошибок - отлов ошибок не очевиден и может сильно усложнится по мере роста цепочки.
+* Отладка - трудно отлаживать и понимать, на каком шаге мы находимся.
+* Отмена - почти невозможно отменить или прервать цепочку вызовов, если пользователь переходит к другой части пользовательского интерфейса, и текущая цепочка запросов больше не нужна.
+
+Как мы видим, цепочка обещаний не является идеальным решением. При работе с Redux у нас есть еще две альтернативы для использования, middleware и saga.
+
+#### Использование middleware
+
+В рамках подхода использования middleware мы разделили код обработки сервера и логику потока. Наш API middleware останется таким же, и нам необходимо найти другое место, что бы внедрить туда логику потока вызовов. Один из подходов, обсуждаемый в главе [Middleware](#Charapter-10), заключается в создании дополнительной middleware для управления потоком:
+
+_Пример middleware для обработки потока пользователей_
+```javascript
+const userFlowMiddleware = ({ dispatch }) => next => action => {
+  switch (action.type) {
+    case FETCH_CURRENT_USER:
+      dispatch(fetchCurrentUser());
+      break;
+    case SET_CURRENT_USER:
+      dispatch(fetchProfile(action.payload.userId));
+      break;
+  };
+
+  next(action);
+}
+```
+
+К сожалению, этот подход также имеет свои проблемы. Он приведет к тому, что action _fetchProfile()_ будет отправляться каждый раз, когда кто-то отправляет _SET_CURRENT_USER_. Там может быть поток, в котором не нужно получать данные о профиле пользователя, но мы не можем это предотвратить.
+
+Мы можем решить эту проблему, создав специальный поток действий, который имеет аналогичное поведение с _fetchCurrentUser()_, но также запускает действие _fetchProfile()_. Это можно осуществить создав новый action creator и action:
+
+_Обработка потока с особым action_
+```javascript
+const fetchCurrentUser = (next = SET_CURRENT_USER) => ({
+  type: API,
+  url: 'user',
+  next
+});
+
+const userFlowMiddleware = ({ dispatch }) => next => action => {
+  switch (action.type) {
+    case FETCH_CURRENT_USER:
+      dispatch(fetchCurrentUser(SPECIAL_SET_CURRENT_USER);
+      break;
+
+    case SPECIAL_SET_CURRENT_USER:
+     dispatch(setCurrentUser(action.payload)); 
+     dispatch(fetchProfile(action.payload.userId));
+     break;
+  };
+
+  next(action);
+}
+```
+
+Такой подход требует изменения нашего action creator весьма неявным способом. Хотя он будет работать, он может вызвать ошибки, если мы забудем выпустить обычный вызов _getCurrentUser()_ из нашего специального обработчика действий. С другой стороны, это будет намного легче отлаживать, поскольку ясно, какой тип запроса мы выполняем.
+
+Более чистый подход состоял бы в том, чтобы позволить нашим асинхронных action creator передать массив действий, на которые middleware должна выполнить _dispatch()_, когда запрос завершен успешно:
+
+_Action creator, который позволяет выполнить множество обратных вызовов_
+```javascript
+const fetchCurrentUser = (extraActions = []) => ({
+  type: API,
+  payload: {
+    url: 'user',
+    success: extraActions.concat(SET_CURRENT_USER)   
+  }
+});
+```
+
+_API middleware с поддержкой множества обратных вызовов_
+```javascript
+const notify = (data) => {
+  action.next.each(type => dispatch({ type, data });
+};
+
+fetch(`user/${id}`)
+  .then(response => response.json())
+  .then(notify)
+  .catch(error => dispatch(apiError(error)));
+```
+
+Эта новая реализация позволит нам остановить поток middleware:
+
+_Обработка потока с множеством action_
+```javascript
+const userFlowMiddleware = ({ dispatch }) => next => action => {
+  switch (action.type) {
+    case FETCH_CURRENT_USER:
+      dispatch(fetchCurrentUser(FETCH_PROFILE);
+      break;
+  
+    case FETCH_PROFILE:
+     dispatch(fetchProfile(action.payload.userId));
+     break;
+  };
+  
+  next(action);
+}
+```
+
+Этот подход позволяет нам получить текущего пользователя с обновлением профиля или без обновления:
+
+```javascript
+// Получить данные о пользователе
+dispatch(fetchCurrentUser());
+ 
+// Получить данные о пользователе и обновить профиль
+dispatch(fetchCurrentUser(FETCH_PROFILE));
+```
+
+Существует ряд предложений по обработке потока в главе [Middleware](#charapter-10), которая может упростить управление этим потоком, например, с помощью sagas.
+
+#### Использование Sagas для управления потоком
+
+Более чистый подход к управлению потоком - использование [redux-saga](https://github.com/redux-saga/redux-saga). Эта библиотека позволяет нам создавать сложные асинхронные решения для управления потоками, используя саги и эффекты. По сути, он использует специальную middleware, для добавления нового элемента в мир Redux.
+
+Хотя Redux-saga подробно не рассматриваются в этой книге, мы приведем простой пример использования sagas для управления потоком:
+
+_Использование redux saga для контроля потока_
+```javascript
+import { call, put } from 'redux-saga/effects'
+
+export function *fetchCurrentUser() {
+  while (true) {
+    yield take(FETCH_CURRENT_USER);
+  
+    const action = yield take(SET_CURRENT_USER);
+  
+    yield put(fetchProfile(action.payload.userId));
+  }
+};
+```
+
+В этом примере у нас есть бесконечный цикл, ожидающий отправки действия _FETCH_CURRENT_USER_. Когда это происходит, код начинает ожидание соответствующего действия _SET_CURRENT_USER_. Payload может использоваться для отправки действия из _fetchProfile()_ для получения соответствующего профиля с сервера.
+
+Это очень простой пример использования саги, он не обрабатывает ошибки и не позволяет отменить запросы потоков. Для получения дополнительной информации о сагах, проконсультируйтесь с обширной документацией на [официальном сайте документации по redux-saga](https://redux-saga.js.org/index.html).
