@@ -49,6 +49,7 @@
     * [Глава 5. WebSockets](#Basic-Architecture)
         * [Redux Link](#Redux-Link)
         * [Реализация кода](#Code-Implementation)
+        * [Полный код middleware для работы с WebSocket](#Complete-WebSocket-Middleware-Code)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -2327,3 +2328,59 @@ return next => action => {
 ```
 
 Используя этот подход, отправка действий на наш сервер через WebSocket становится такой же простой, как установка поля _meta.websocket_ в значение _true_.
+
+### <a name="Complete-WebSocket-Middleware-Code">Полный код middleware для работы с WebSocket</a>
+
+_middleware/ws.js_
+```javascript
+import { wsConnected, wsDisconnected } from 'actions';
+import { WS_ROOT } from 'const/global';
+ 
+const SOCKET_STATES = {
+  CONNECTING: 0,
+  OPEN: 1,
+  CLOSING: 2,
+  CLOSED: 3
+};
+ 
+const wsMiddleware = ({ dispatch }) => next => {
+ 
+ const websocket = new WebSocket(WS_ROOT);
+ 
+ Object.assign(websocket, {
+   onopen() {
+     active = true; 
+     dispatch(wsConnected()) 
+   },
+ 
+   onclose() {
+     active = false; 
+     dispatch(wsDisconnected())
+   },
+ 
+   onerror(error) {
+      console.log(`WS Error: ${ error.data }`);
+   },
+ 
+   onmessage(event) {
+      dispatch(JSON.parse(event.data));
+   }
+ });
+ 
+ return action => {
+   if (websocket.readyState === SOCKET_STATES.OPEN && 
+       action.meta && 
+       action.meta.websocket) {
+ 
+     // Удалим метаданные action перед отправкой
+     const cleanAction = Object.assign({}, action, { 
+       meta: undefined 
+     });
+     websocket.send(JSON.stringify(cleanAction));
+   }
+ 
+   next(action);
+}}; 
+ 
+export default wsMiddleware;
+```
