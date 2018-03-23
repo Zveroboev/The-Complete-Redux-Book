@@ -2241,3 +2241,89 @@ _Обработка onmessage_
 ```javascript
 websocket.onmessage = event => dispatch(JSON.parse(event.data));
 ```
+
+#### Обработка исходящих сообщений и действий
+
+При обработке всех обратных вызовов WebSocket нам нужно определить, как и когда передавать действия из Redux на сервер:
+
+```javascript
+return action => {
+  // TODO: Отправить action на сервер
+ 
+  next(action);
+};
+```
+
+Перед отправкой любых действий нам необходимо убедиться, что WebSocket открыт и готов к передаче. У WebSockets есть свойство _readyState_, которое возвращает текущий статус сокета.
+
+_Проверка что сокет открыт_
+```javascript
+const SOCKET_STATES = {
+  CONNECTING: 0,
+  OPEN: 1,
+  CLOSING: 2,
+  CLOSED: 3
+};
+ 
+if (websocket.readyState === SOCKET_STATES.OPEN) {
+  // Отправить
+}
+```
+
+Даже когда сокет открыт не все действия должны быть отправлены (например, действия TAB_SELECTED или REST_API_COMPLETE). Наилучшим подходом будет оставить решение за action creator. Стандартный способ передать специальную информацию об action нашей middleware заключается в использовании мета-ключа внутри action. Таким образом, вместо использования обычного action creator:
+
+_Обычный action creator_
+```javascript
+export const localAction = (data) => ({
+  type: TEST, 
+  data 
+});
+```
+
+мы можем добавить специальную мета-информацию для action:
+
+_Action creator для отправки ction на сервер_
+```javascript
+export const serverAction = (data) => ({ 
+  type: TEST, 
+  data, 
+  meta: { websocket: true }
+});
+```
+
+Таким образом, наша middleware может использовать поле meta.websocket для принятия решения о том, следует ли отправлять action или нет:
+
+_Отправка action на сервер_
+```javascript
+return action => {
+  if (websocket.readyState === SOCKET_STATES.OPEN && 
+      action.meta && 
+      action.meta.websocket) {
+    websocket.send(JSON.stringify(action));
+  }
+  
+  next(action);
+};
+```
+
+Однако, обратите внимание, что этот код может вызвать непредсказуемую ошибку. Поскольку мы отправляем все action на сервер, он может, в свою очередь, передавать его всем другим клиентам (даже нам самим). И поскольку мы не удалили метаинформацию о action, middleware других клиентов WebSocket может повторно передавать его снова и снова.
+
+Сервер, знающий о Redux, должен учитывать удаление всей метаинформации для любого действия, которое он получает. В нашей реализации мы удалим это на стороне клиента, хотя сервер все равно должен выполнить проверку:
+
+_Отправка action на сервер (без метаданных)_
+```javascript
+return next => action => {
+  if (websocket.readyState === SOCKET_STATES.OPEN && 
+      action.meta && 
+      action.meta.websocket) {
+ 
+    // Удалим метаданные action перед отправкой
+    const cleanAction = Object.assign({}, action, { meta: undefined });
+    websocket.send(JSON.stringify(cleanAction));
+  }
+ 
+  next(action);
+};
+```
+
+Используя этот подход, отправка действий на наш сервер через WebSocket становится такой же простой, как установка поля _meta.websocket_ в значение _true_.
