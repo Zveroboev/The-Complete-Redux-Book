@@ -2212,3 +2212,12 @@ import { WS_CONNECTED } from 'consts/action-types';
  
 const wsConnected = () => ({ type: WS_CONNECTED });
 ```
+
+#### onclose
+
+Событие закрытия или отключения очень похоже на onopen и может обрабатываться точно так же:
+
+_Обработка onclose_
+```javascript
+websocket.onclose = () => dispatch(wsDisconnected());
+```
