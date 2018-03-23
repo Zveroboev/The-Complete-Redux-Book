@@ -52,6 +52,7 @@
         * [Реализация кода](#Code-Implementation)
         * [Полный код middleware для работы с WebSocket](#Complete-WebSocket-Middleware-Code)
         * [Аутентификация](#Authentication)
+        * [Пример потока](#Sample-Flow)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -2391,4 +2392,79 @@ export default wsMiddleware;
 
 Обработка аутентификации с помощью WebSockets может быть немного сложной, как и во многих приложениях, WebSockets используются наряду с обычными HTTP-запросами. Аутентификация обычно выполняется с помощью обычных вызовов REST или OATH, а интерфейсу предоставляется токен, который сохраняется в cookie или в LocalStorage.
 
-Чтобы разрешить серверу аутентифицировать WebSocket, клиентом должено быть отправлено специальное соглашение. В случае с Redux это может быть специальный объект action, который должен быть отправлен перед выполнением любой другой работы над WebSockets.
+Чтобы разрешить серверу аутентифицировать WebSocket, клиентом должно быть отправлено специальное соглашение. В случае с Redux это может быть специальный объект action, который должен быть отправлен перед выполнением любой другой работы над WebSockets.
+
+### <a name="Sample-Flow">Пример потока</a>
+
+Простым способом реализации аутентификации может быть передача действия API на наш сервер, содержащий адрес электронной почты и пароль:
+
+_Пример action для аутентификации с сервером_
+```javascript
+dispatch({
+  type: API,
+  payload: {
+    url: 'login',
+    method: 'POST',
+    success: LOGIN_SUCCEESS,
+    data: {
+      email: 'info@redux-book.com',
+      password: 'top secret'
+    }
+  }
+});
+```
+
+В случае успеха наша middleware отправит action _LOGIN_SUCCESS_, содержащий информацию, возвращаемую с сервера:
+
+_Action отправленный при успешном входе в систему_
+```javascript
+{
+  type: LOGIN_SUCCEESS,
+  payload: {
+    token: 'xxxYYYzzzz'
+  }
+}
+```
+
+Наш пользовательский reducer, в ответ на этот action, добавит токен в state, для передачи его в заголовках будущих API запросов  на сервер.
+
+Чтобы сделать аутентификацию WebSockets с использованием этого токена, мы можем добавить специальный код в наш API WebSocket, который будет проверять _LOGIN_SUCCESS_ (и _LOGOUT_SUCCESS_)
+
+_Код обработки аутентификации WebSocket в middleware_
+```javascript
+if (action.type === LOGIN_SUCCESS) {
+  dispatch({ 
+    type: WEBSOCKET_AUTH, 
+    payload: action.payload.token, 
+    meta: { websocket: true }
+  });
+}
+ 
+if (action.type === LOGOUT_SUCCESS) {
+  dispatch({ 
+    type: WEBSOCKET_LOGOUT, 
+    meta: { websocket: true }
+  });
+}
+```
+
+Теперь поступление _LOGIN_SUCCESS_ приведет к отправке и обработке нового action с обработкой WebSocket нашей middleware для аутентификации с сервером.
+
+_Поток действий_
+```javascript
+> Store: 
+{ type: API, payload: ... }
+ 
+> Server:
+POST http://.../login
+ 
+> Store: 
+{ type: LOGIN_SUCCESS, payload: token }
+ 
+> Store: 
+{ type: WEBSOCKET_AUTH, payload: token, meta: { websocket: true }}
+ 
+> WebSocket: 
+{ type: WEBSOCKET_AUTH, payload: token }
+```
+
