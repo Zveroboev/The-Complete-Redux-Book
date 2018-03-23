@@ -46,7 +46,8 @@
         * [Связывания API](#Chaining-APIs)
         * [Отмена API запросов](#Canceling-API-Requests)
         * [Подведем итоги](#Summary-4)
-    * [Глава 5. WebSockets](#Basic-Architecture)  
+    * [Глава 5. WebSockets](#Basic-Architecture)
+        * [Redux Link](#Redux-Link)  
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -1097,19 +1098,19 @@ export default createStore(
 _Добавляем поддержку SET_RECIPES в reducer_
 ```javascript
 import { ADD_RECIPE, SET_RECIPES } from 'constants/action-types';
-
+ 
 const recipesReducer = (recipes = [], action) => {
   switch (action.type) {
     case ADD_RECIPE:
       return recipes.concat({name: action.name});
-
+ 
     case SET_RECIPES:
       return action.data.recipes;
   }
-
+ 
   return recipes;
 };
-
+ 
 export default recipesReducer;
 ```
 
@@ -1583,7 +1584,7 @@ _Обещание в action creator_
 const fetchUser = id => (dispatch) =>
   fetch(`user/${id}`)
     .then(response => response.json())
-    .then(userData => dispatch(setUserData(userData))
+    .then(userData => dispatch(setUserData(userData)))
     .catch(error => dispatch(apiError(error)));
 ```
 
@@ -1626,8 +1627,8 @@ _Обещание в action creator_
 const fetchUser = id => (dispatch) =>
   fetch(`user/${id}`)
     .then(response => response.json())
-    .then(userData => dispatch(setUserData(userData))
-    .catch(error => dispatch(apiError(error)));
+    .then(userData => dispatch(setUserData(userData)))
+    .catch(error => dispatch(apiError(error)))
 ```
 
 В этом коде есть несколько проблем, которые нам необходимо будет решить в нашем общем API:
@@ -1667,8 +1668,7 @@ const apiMiddleware = ({ dispatch }) => next => action => {
    
   fetch(BASE_URL + action.url)
      .then(response => response.json())
-     .then(response => dispatch({ type: payload.success, response }))
-  );
+     .then(response => dispatch({ type: payload.success, response }));
 };
 ```
 
@@ -1937,7 +1937,7 @@ const fetchCurrentUser = (next = SET_CURRENT_USER) => ({
 const userFlowMiddleware = ({ dispatch }) => next => action => {
   switch (action.type) {
     case FETCH_CURRENT_USER:
-      dispatch(fetchCurrentUser(SPECIAL_SET_CURRENT_USER);
+      dispatch(fetchCurrentUser(SPECIAL_SET_CURRENT_USER));
       break;
 
     case SPECIAL_SET_CURRENT_USER:
@@ -1984,7 +1984,7 @@ _Обработка потока с множеством action_
 const userFlowMiddleware = ({ dispatch }) => next => action => {
   switch (action.type) {
     case FETCH_CURRENT_USER:
-      dispatch(fetchCurrentUser(FETCH_PROFILE);
+      dispatch(fetchCurrentUser(FETCH_PROFILE));
       break;
   
     case FETCH_PROFILE:
@@ -2122,3 +2122,19 @@ WebSockets позволяет нам открывать соединение с 
 Хотя одновременно может использоваться множество WebSockets, большинству приложений потребуется одно или несколько соединений для разных серверов на основании требуемого функционала (сервер чата, сервер уведомлений и так далее).
 
 Для начала мы создадим систему для связи с одним WebSocket, который впоследствии может быть расширен для поддержки множества WebSocket.
+
+### <a name="Redux-Link">Redux Link</a>
+
+Общая архитектура Redux предназначена для отправки четко определенных сообщений в хранилище. Эта же схема может отлично работать для связи с сервером через WebSockets. Та же структура простых объектов с свойством type может быть отправлена на сервер, и мы можем получить аналогично структурированный ответ:
+
+_Пример потока обмена данными
+```javascript
+> TO-SERVER: { type: 'GET_USER', id: 100 }
+< FROM-SERVER: { type: 'USER_INFO', data: { ... }} 
+```
+
+Более ясным примером может быть сервер чата, где мы можем отправить в хранилище сообщение, подобное: {id: 'XXX', type: 'ADD_MESSAGE', msg: 'Hello'}. Наш store может обработать это немедленно, добавив сообщение в текущий массив сообщений и отправив его «как есть» по WebSocket на сервер. Сервер, в свою очередь, может передать сообщение всем другим клиентам. Каждый из них получит совершенно стандартный Redux action, который может быть передан непосредственно в их store.
+
+Таким образом, наш frontend может использовать Redux action для передачи информации между окнами браузера и другими компьютерами, используя сервер в качестве общего диспетчера. Наш сервер может выполнить некоторую дополнительную работу, такую как аутентификация и валидация, но по существу он служит посредников для передачи сообщения.
+
+В идеале, реализация WebSocket для Redux позволит нам отправлять (_dispatch()_) действия и, при необходимости, перенаправлять их на сервер, а любые действия, поступающие из WebSocket, отправляются непосредственно в store.
