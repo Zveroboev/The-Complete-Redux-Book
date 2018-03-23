@@ -47,9 +47,11 @@
         * [Отмена API запросов](#Canceling-API-Requests)
         * [Подведем итоги](#Summary-4)
     * [Глава 5. WebSockets](#Basic-Architecture)
+        * [Основная архитектура](#Basic-Architecture)
         * [Redux Link](#Redux-Link)
         * [Реализация кода](#Code-Implementation)
         * [Полный код middleware для работы с WebSocket](#Complete-WebSocket-Middleware-Code)
+        * [Аутентификация](#Authentication)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -2384,3 +2386,5 @@ const wsMiddleware = ({ dispatch }) => next => {
  
 export default wsMiddleware;
 ```
+
+### <a name="Authentication">Аутентификация</a>
