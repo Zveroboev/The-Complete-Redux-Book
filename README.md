@@ -57,6 +57,7 @@
         * [Подведем итоги](#Summary-5)
     * [Глава 6. Тесты](#charapter-6)
         * [Тестовые файлы и каталоги](#Test-Files-and-Directories)
+        * [Тестироание Action Creators](#Testing-Action-Creators)
 
 ## <a name="part-1">Часть 1. Введение в Redux</a>
 
@@ -2525,5 +2526,71 @@ describe('actions', () => {
   it('должен создать action, чтобы удалить todo', () => {
     // TODO: Реализовать тест
   });
+});
+```
+
+### <a name="Testing-Action-Creators">Тестирование Action Creators</a>
+
+Всюду по этой книге мы пытались хранить асинхронные потоки вне action creator, переместив их в middleware и утилитарные функции. Этот подход позволяет очень легко тестировать action creators, поскольку они представляют собой функции, которые просто возвращают обычные JavaScript объекты:
+
+_Пример action creator_
+```javascript
+import * as actions from 'constants/action-types';
+ 
+export const setRecipes = (recipes) => ({
+ type: actions.SET_RECIPES,
+ payload: recipes
+});
+```
+
+Наш action creator _setRecipes()_ получает единственный параметр и создает в результате простой JavaScript объект. Поскольку здесь нет логики управления потоком или каких-либо побочных эффектов, любой вызов этой функции всегда возвращает одно и то же значение, что делает его очень простым для тестирования:
+
+_Пример теста для setRecipes_
+```javascript
+import * as actions from 'actions'
+ 
+describe('actions', () => {
+ it('должен создать action, чтобы добавить todo', () => {
+   const expected = { type: 'ADD_RECIPE', payload: 'test' };
+   const actual = actions.addRecipe('test');
+   
+   expect(actual).toEqual(expected);
+ });
+});
+```
+
+Этот тест построен в трех частях. Во-первых, мы вычисляем, что должен сделать наш action creator при вызове с _'test'_ в качестве аргумента - в этом случае объект JavaScript, содержащий два ключа, _type_ и _payload_:
+
+_Рассчет ожидаемого результата_
+```javascript
+const expected = { type: 'ADD_RECIPE', payload: 'test' };
+```
+
+Во-вторых, вызывается action creator _actions.addRecipe('test')_, чтобы получить значение, созданное реализацией нашего action creator:
+
+_Рассчет фактического результата_
+```javascript
+const actual = actions.addRecipe('test');
+```
+
+И наконец используются Jest функции  _expect()_ и _toEqual()_ для проверки того, что фактические и ожидаемые результаты одинаковы:
+
+_Проверка соответствия результатов_
+```javascript
+expect(actual).toEqual(expected);
+```
+
+Если ожидаемые и фактические объекты различаются, Jest выдаст ошибку и предоставит информацию, описывающую различия, что позволит нам отловить неправильные реализации.
+
+#### Улучшение кода
+
+Из-за простоты этого кода принято комбинировать несколько этапов в один вызов и переписывать тест следующим образом:
+
+_Более короткая версия теста_
+```javascript
+it('должен создать action для добавления рецепта', () => {
+ const expected = { type: 'ADD_RECIPE', payload: 'test' };
+ 
+ expect(actions.addRecipe('test')).toEqual(expected);
 });
 ```
