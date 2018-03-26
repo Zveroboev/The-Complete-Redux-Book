@@ -2519,11 +2519,11 @@ describe('actions', () => {
 _Пример тестового файла с описанием тестов_
 ```javascript
 describe('actions', () => {
-  it('должен создать action, чтобы добавить todo', () => {
+  it('должен создать action для добавления рецепта', () => {
     // TODO: Реализовать тест
   });
  
-  it('должен создать action, чтобы удалить todo', () => {
+  it('должен создать action для удаления рецепта', () => {
     // TODO: Реализовать тест
   });
 });
@@ -2550,7 +2550,7 @@ _Пример теста для setRecipes_
 import * as actions from 'actions'
  
 describe('actions', () => {
- it('должен создать action, чтобы добавить todo', () => {
+ it('должен создать action для добавления рецепта', () => {
    const expected = { type: 'ADD_RECIPE', payload: 'test' };
    const actual = actions.addRecipe('test');
    
