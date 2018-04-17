@@ -642,6 +642,6 @@ const reducer = (state = initialState, action) => {
 };
 ```
 
-### <a name="Testing-Middleware">Тестрирование Middleware</a>
+### <a name="Testing-Middleware">Тестирование Middleware</a>
 
 ...

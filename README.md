@@ -61,5 +61,5 @@
         * [Тестирование Action Creators](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-2/charapter-6.md#Testing-Action-Creators)
         * [Async Action Creators](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-2/charapter-6.md#Async-Action-Creators)
         * [Тесты для Reducer](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-2/charapter-6.md#Reducer-Tests)
-        * [Тестрирование Middleware](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-2/charapter-6.md#Testing-Middleware)
+        * [Тестирование Middleware](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-2/charapter-6.md#Testing-Middleware)
        
