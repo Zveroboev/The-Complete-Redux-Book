@@ -555,8 +555,7 @@ const initialState = deepFreeze(reducer(undefined, { type: 'INIT' }));
 
 Любая попытка изменить _initialState_ теперь автоматически выдает ошибку:
 ```javascript
-initialState.push('test');
-> TypeError: Can't add property 0, object is not extensible
+initialState.push('test'); // -> TypeError: Can't add property 0, object is not extensible
 ```
 
 Чтобы наши редукторы никогда не меняли исходное состояние, мы всегда можем вызвать _deepFreeze()_ для состояния, переданного в качестве первого параметра в reducer:
