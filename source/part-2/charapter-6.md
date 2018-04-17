@@ -449,7 +449,7 @@ describe("reducer для рецептов", () => {
 };
 ```
 
-Одно и тоже изначальное состояние использовать во всех тестах, но оно по прежнему жестко закодированно в нашем тестовом файле. Если наш reducer изменит способ создания состояния, мы будем вынеждены обновить и тестовые файлы соответственно. Что бы избежать этой зависимости мы можем положиться на функцию, которую предоставляет Redux - _combineReducers()_. Она предусматривает, что любой reducer, вызванный с неопределенным состоянием, должен вернуть свою часть изначального состояния:
+Одно и тоже изначальное состояние использовать во всех тестах, но оно по прежнему жестко закодировано в нашем тестовом файле. Если наш reducer изменит способ создания состояния, мы будем вынуждены обновить и тестовые файлы соответственно. Что бы избежать этой зависимости мы можем положиться на функцию, которую предоставляет Redux - _combineReducers()_. Она предусматривает, что любой reducer, вызванный с неопределенным состоянием, должен вернуть свою часть изначального состояния:
 
 _Часть нашего reducer_
 ```javascript
@@ -468,3 +468,67 @@ const initialState = reducer(undefined, { type: 'INIT' });
 ```
 
 Результат этой операции поместит тот же [] в изначальное состояние, но теперь любые изменения того, что reducer считает исходным состоянием, будут автоматически получены и в тестах.
+
+#### Делаем тесты более симпотичными
+
+Теперь, когда мы решили все проблемы с функциональностью, мы можем использовать те же самые трюки, которые мы использовали в тестах action-creator, чтобы упростить наши тесты на reducer. Это изначальная структура тестового файла:
+
+_Изначальный тест_
+```javascript
+const initialState = reducer(undefined, { type: 'INIT' });
+ 
+it('должен добавить рецепт в пустой список', () => {
+  const action   = { type: ADD_RECIPE, payload: 'test' };
+  const expected = [{ title: "test" }];
+ 
+  expect(reducer(initialState, action)).toEqual(expected);
+});
+ 
+it('должен добавить рецепт в не пустой список', () => {
+  const baseState = reducer(initialState, { type: ADD_RECIPE, payload: 'first' });
+  const action    = { type: ADD_RECIPE, payload: 'test' };
+  const expected  = [{ title: "first" }, { title: "test" }];
+  const actual    = reducer(baseState, action);
+ 
+  expect(actual).toEqual(expected);
+});
+```
+
+Первым шагом будет объединение _action_, _actual_ и _expected_ в одну строку:
+
+_Упрощенные тесты_
+```javascript
+const initialState = reducer(undefined, { type: 'INIT' }); 
+ 
+it('должен добавить рецепт в пустой список', () => {
+  const expected = [{ title: "test" }];
+ 
+  expect(reducer(initialState, { type: ADD_RECIPE, payload: 'test' }))
+    .toEqual(expected);
+});
+ 
+it('должен добавить рецепт в не пустой список', () => {
+  const baseState = reducer(initialState, { type: ADD_RECIPE, payload: 'first' });
+  const expected  = [{ title: "first" }, { title: "test" }];
+ 
+  expect(reducer(baseState, { type: ADD_RECIPE, payload: 'test' }))
+    .toEqual(expected);
+});
+```
+
+Второй шаг - использовать моментальные снимки (snapshot) Jest вместо вычисляемых вручную ожидаемых значений:
+
+_Упрощенные тесты, шаг 2_
+```javascript
+it('должен добавить рецепт в пустой список', () => {
+  expect(reducer(initialState, { type: ADD_RECIPE, payload: 'test' }))
+    .toMatchSnapshot()
+});
+ 
+it('должен добавить рецепт в не пустой список', () => {
+  const baseState = reducer(initialState, { type: ADD_RECIPE, payload: 'first' });
+ 
+  expect(reducer(baseState, { type: ADD_RECIPE, payload: 'test' }))
+    .toMatchSnapshot();
+});
+```
