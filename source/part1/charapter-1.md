@@ -1,4 +1,4 @@
-## <a name="part-1">Часть 1. Введение в Redux</a>
+# <a name="part-1">Часть 1. Введение в Redux</a>
 
 ## <a name="Сharapter-1">Глава 1. Основные понятия Flux и Redux</a>
 
