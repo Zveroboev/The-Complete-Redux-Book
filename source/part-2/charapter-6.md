@@ -532,3 +532,44 @@ it('должен добавить рецепт в не пустой список
     .toMatchSnapshot();
 });
 ```
+
+#### Избегание мутаций
+
+Одним из ключевых требований является то, что наши reducer никогда не изменяют состояние, а только создают новое. Наши текущие тесты не отлавливают эти проблемы (попробуйте изменить _.concat()_ на _.push()_ в реализации reducer).
+
+Хотя мы можем попытаться отловить эти ошибки, вручную проверив, что начальное состояние не изменилось, более простым способом было бы "заморозить" начальное состояние и внести любые изменения в нем будут автоматически останавливать тесты. Для этого мы можем использовать отличную библиотеку [deep-freeze](https://github.com/substack/deep-freeze):
+
+_Установка deep-freeze_
+```bash
+npm install deep-freeze --save
+```
+
+Что бы использовать deep-freeze, мы обернем наше изначальное состояние вызовом _deepFreeze()_:
+
+_Использование deep-freeze_
+```javascript
+import deepFreeze from 'deep-freeze';
+  
+const initialState = deepFreeze(reducer(undefined, { type: 'INIT' }));
+```
+
+Любая попытка изменить _initialState_ теперь автоматически выдает ошибку:
+```javascript
+initialState.push('test');
+> TypeError: Can't add property 0, object is not extensible
+```
+
+Чтобы наши редукторы никогда не меняли исходное состояние, мы всегда можем вызвать _deepFreeze()_ для состояния, переданного в качестве первого параметра в reducer:
+
+_Обновленный тест добавления в не пустой список_
+```javascript
+it('должен добавить рецепт в не пустой список', () => {
+  const baseState = reducer(initialState, { type: ADD_RECIPE, payload: 'first' });
+ 
+  expect(reducer(
+      deepFreeze(baseState),
+      { type: ADD_RECIPE, payload: 'test' }
+    )
+  ).toMatchSnapshot();
+});
+```
