@@ -612,4 +612,4 @@ export default createStore(
 
 В этой главе мы создали простое Redux приложение, которое поддерживает множественные reducer, middleware и action creators. Мы установили доступ к серверу и создали минимальный пользовательский интерфейс, используя jQuery. В [Git репозитории](https://github.com/redux-book) этой книги вы можете найти полный исходный код для этого примера, включая отсутствующие части (например, пользовательский интерфейс ингредиентов).
 
-<a href="https://github.com/Zveroboev/The-Complete-Redux-Book#%D0%9E%D0%B3%D0%BB%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5">К оглавлению</a>
+<a href="https://github.com/Zveroboev/The-Complete-Redux-Book#Table-of-contents">К оглавлению</a>
