@@ -3,6 +3,7 @@
 Перевод книги от 31-01-2017. Переведено и опубликовано с разрешения правообладателей.
 
 ## <a name="Table-of-contents">Оглавление</a>
+
 * [Часть 1. Введение в Redux](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-1/charapter-1.md#Part-1)
     * [Глава 1. Основные понятия Flux и Redux](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-1/charapter-1.md#Сharapter-1)
         * [Что такое Flux?](https://github.com/Zveroboev/The-Complete-Redux-Book/blob/master/source/part-1/charapter-1.md#What-Is-Flux)
